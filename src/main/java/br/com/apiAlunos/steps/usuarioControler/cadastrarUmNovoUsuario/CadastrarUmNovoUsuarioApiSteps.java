@@ -5,18 +5,17 @@ import br.com.apiAlunos.model.usuarioControler.cadastrarUmNovoUsuario.response.C
 import br.com.apiAlunos.model.usuarioControler.cadastrarUmNovoUsuario.response.CadastrarUmNovoUsuario400ResponseModel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.cucumber.java.en.Given;
+
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
-import java.util.Map;
-
 import static io.restassured.RestAssured.config;
 import static io.restassured.config.EncoderConfig.encoderConfig;
-import static org.junit.Assert.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CadastrarUmNovoUsuarioApiSteps {
 
