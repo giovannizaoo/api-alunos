@@ -1,0 +1,85 @@
+name: API Tests Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout do código
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Configuração do Java (versão 17)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # 3. Instalação dependências e execução dos testes
+      - name: Build and run tests with Maven
+        run: mvn clean test
+
+      # 4. Upload de relatórios como artefatos (download manual)
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: cucumber-reports
+          path: |
+            target/*.html
+            target/*.json
+
+      # 5. Preparar diretório de relatórios versionado
+      - name: Prepare report directory
+        run: |
+          mkdir -p reports/run-${{ github.run_number }}
+          cp target/*.html reports/run-${{ github.run_number }}/cucumber-report.html
+          cp target/*.json reports/run-${{ github.run_number }}/ || true
+
+      # 6. Criar/atualizar dashboard HTML
+      - name: Update dashboard
+        run: |
+          STATUS="✅"
+          if [ "${{ job.status }}" != "success" ]; then STATUS="❌"; fi
+
+          # Garante que o dashboard anterior não seja perdido
+          if [ -f reports/index.html ]; then
+            cp reports/index.html reports/index_old.html
+          fi
+
+          echo "<html><head><meta charset='UTF-8'><title>Cucumber Reports</title>" > reports/index.html
+          echo "<style>body{font-family:Arial,sans-serif;margin:40px;}h1{color:#2c3e50;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:10px;text-align:left;}th{background:#34495e;color:white;}tr:nth-child(even){background:#f9f9f9;}a{text-decoration:none;color:#2980b9;}</style></head><body>" >> reports/index.html
+          echo "<h1>Histórico de Execuções - Cucumber Reports</h1>" >> reports/index.html
+          echo "<table><tr><th># Execução</th><th>Data/Hora</th><th>Status</th><th>Branch</th><th>Commit</th><th>Relatório</th></tr>" >> reports/index.html
+
+          # Adiciona a execução atual
+          NUM=${{ github.run_number }}
+          DATE=$(date '+%d/%m/%Y %H:%M')
+          BRANCH="${GITHUB_REF##*/}"
+          COMMIT="${GITHUB_SHA::7}"
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+
+          echo "<tr><td>#$NUM</td><td>$DATE</td><td>$STATUS</td><td>$BRANCH</td><td><a href='$REPO_URL/commit/${GITHUB_SHA}'>$COMMIT</a></td><td><a href='run-$NUM/cucumber-report.html'>Abrir</a></td></tr>" >> reports/index.html
+
+          # Se já existia histórico, reaproveita
+          if [ -f reports/index_old.html ]; then
+            sed -n '/<tr><th/,$p' reports/index_old.html | tail -n +2 | head -n -2 >> reports/index.html
+          fi
+
+          echo "</table></body></html>" >> reports/index.html
+
+      # 7. Publicar no GitHub Pages
+      - name: Deploy Cucumber Reports to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./reports
+          keep_files: true
