@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -29,7 +30,7 @@ jobs:
 
       # 4. Upload de relatórios como artefatos (download manual)
       - name: Upload test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cucumber-reports
           path: |
@@ -49,7 +50,6 @@ jobs:
           STATUS="✅"
           if [ "${{ job.status }}" != "success" ]; then STATUS="❌"; fi
 
-          # Garante que o dashboard anterior não seja perdido
           if [ -f reports/index.html ]; then
             cp reports/index.html reports/index_old.html
           fi
@@ -59,7 +59,6 @@ jobs:
           echo "<h1>Histórico de Execuções - Cucumber Reports</h1>" >> reports/index.html
           echo "<table><tr><th># Execução</th><th>Data/Hora</th><th>Status</th><th>Branch</th><th>Commit</th><th>Relatório</th></tr>" >> reports/index.html
 
-          # Adiciona a execução atual
           NUM=${{ github.run_number }}
           DATE=$(date '+%d/%m/%Y %H:%M')
           BRANCH="${GITHUB_REF##*/}"
@@ -68,7 +67,6 @@ jobs:
 
           echo "<tr><td>#$NUM</td><td>$DATE</td><td>$STATUS</td><td>$BRANCH</td><td><a href='$REPO_URL/commit/${GITHUB_SHA}'>$COMMIT</a></td><td><a href='run-$NUM/cucumber-report.html'>Abrir</a></td></tr>" >> reports/index.html
 
-          # Se já existia histórico, reaproveita
           if [ -f reports/index_old.html ]; then
             sed -n '/<tr><th/,$p' reports/index_old.html | tail -n +2 | head -n -2 >> reports/index.html
           fi
